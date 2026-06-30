@@ -27,21 +27,16 @@ final deviceScanProvider = FutureProvider.autoDispose<List<BluetoothDevice>>((
 });
 
 final sensorServiceProvider = StreamProvider<Sensor>((ref) async* {
-  // Pull the active stream directly from the service
   final bleService = ref.watch(bluetoothServiceProvider);
   final stream = bleService.getStream();
 
-  // Listen directly to the raw byte chunks
   await for (final List<int> bytes in stream) {
     if (bytes.isEmpty) continue;
 
     try {
       final String jsonStr = String.fromCharCodes(bytes).trim();
-      print("🚀 RIVERPOD PARSER CAUGHT: $jsonStr");
-
       final Map<String, dynamic> jsonMap = jsonDecode(jsonStr);
 
-      // Match the "sensor" discriminator and yield the data
       if (jsonMap["type"] == "sensor") {
         yield Sensor.fromJson(jsonMap);
       }

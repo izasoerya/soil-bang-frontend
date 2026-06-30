@@ -61,26 +61,11 @@ class BluetoothSerivce {
       for (var service in services) {
         if (service.uuid == Guid("6E400001-B5A3-F393-E0A9-E50E24DCCA9E")) {
           for (var characteristic in service.characteristics) {
-            // 1. Locate TX
             if (characteristic.uuid ==
                 Guid("6E400003-B5A3-F393-E0A9-E50E24DCCA9E")) {
               _txCharacteristic = characteristic;
               await _txCharacteristic!.setNotifyValue(true);
-
-              // -------------------------------------------------------------
-              // CRITICAL FIX: Direct Hardware Interceptor
-              // This proves the data reached Dart, completely ignoring Riverpod
-              // -------------------------------------------------------------
-              _txCharacteristic!.lastValueStream.listen((value) {
-                if (value.isNotEmpty) {
-                  print(
-                    "✅ HARDWARE DIRECT INTERCEPT: ${String.fromCharCodes(value)}",
-                  );
-                }
-              });
-            }
-            // 2. Locate RX
-            else if (characteristic.uuid ==
+            } else if (characteristic.uuid ==
                 Guid("6E400002-B5A3-F393-E0A9-E50E24DCCA9E")) {
               _rxCharacteristic = characteristic;
             }
@@ -88,7 +73,6 @@ class BluetoothSerivce {
         }
       }
 
-      // 3. CRITICAL FIX: Ensure BOTH channels are successfully mapped
       if (_txCharacteristic != null && _rxCharacteristic != null) {
         _connectionState = true;
       } else {
@@ -104,31 +88,16 @@ class BluetoothSerivce {
   }
 
   Future<void> sendCommand() async {
-    try {
-      // 1. Properly format the JSON and add the \n delimiter
-      String jsonCommand = '{"command":"sampling"}';
+    String jsonCommand = '{"command":"sampling"}';
+    List<int> bytes = utf8.encode(jsonCommand);
 
-      // 2. Encode the string into a List<int> byte array
-      List<int> bytes = utf8.encode(jsonCommand);
-
-      // 3. Write to the RX characteristic (ensure you are targeting 6E400002)
-      await _rxCharacteristic!.write(
-        bytes,
-        withoutResponse:
-            true, // Use 'true' if you don't need the ESP32 to confirm receipt
-      );
-
-      print("Command sent successfully.");
-    } catch (e) {
-      print("Failed to send command: $e");
-    }
+    await _rxCharacteristic!.write(bytes, withoutResponse: true);
   }
 
   Stream<List<int>> getStream() {
     if (!_connectionState || _txCharacteristic == null) {
       return Stream.empty();
     }
-    // Return the stable stream
     return _txCharacteristic!.lastValueStream;
   }
 
