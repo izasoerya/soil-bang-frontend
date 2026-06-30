@@ -1,3 +1,4 @@
+import 'package:bang_soil/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 class DropdownDevice extends StatelessWidget {
@@ -15,22 +16,35 @@ class DropdownDevice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: Color.fromRGBO(31, 45, 56, 1),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade600, width: 0.5),
+        color: AppColors.surfaceInput,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border),
       ),
-      padding: EdgeInsets.symmetric(horizontal: 10),
       child: DropdownButton<String>(
         value: selectedValue,
+        isExpanded: true,
         borderRadius: BorderRadius.circular(10),
-        dropdownColor: Color.fromRGBO(30, 40, 51, 1),
+        dropdownColor: AppColors.surfaceInput,
         underline: const SizedBox(),
+        icon: const Icon(
+          Icons.keyboard_arrow_down_rounded,
+          color: AppColors.textSecondary,
+          size: 20,
+        ),
         onChanged: onChanged,
         items: items.map((String item) {
           return DropdownMenuItem<String>(
             value: item,
-            child: Text(item, style: TextStyle(color: Colors.white)),
+            child: Text(
+              item,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 13,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
           );
         }).toList(),
       ),
