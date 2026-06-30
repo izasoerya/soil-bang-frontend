@@ -1,9 +1,11 @@
 import 'package:bang_soil/providers/bluetooth_provider.dart';
 import 'package:bang_soil/theme/app_theme.dart';
+import 'package:bang_soil/views/widgets/molecules/app_header.dart';
 import 'package:bang_soil/views/widgets/molecules/device_section.dart';
 import 'package:bang_soil/views/widgets/molecules/sensor_body_section.dart';
 import 'package:bang_soil/views/widgets/molecules/sensor_header_section.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class DashboardPage extends ConsumerStatefulWidget {
@@ -14,7 +16,7 @@ class DashboardPage extends ConsumerStatefulWidget {
 }
 
 class DashboardPageState extends ConsumerState<DashboardPage> {
-  Map<String, String> _lastListDevice = {};
+  Map<String, String> _listNameAndIdDevice = {};
   String? _selectedDeviceName;
 
   @override
@@ -25,35 +27,31 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
 
     return SafeArea(
       child: Container(
-        width: double.infinity,
-        height: double.infinity,
         color: AppColors.background,
         child: Column(
           children: [
-            _buildHeader(),
+            AppHeader(),
             Expanded(
               child: scanState.when(
                 loading: () =>
                     const _LoadingState(message: 'Scanning for devices...'),
                 error: (error, stack) => _ErrorState(message: error.toString()),
                 data: (devices) {
-                  _lastListDevice = {
-                    for (var device in devices)
+                  _listNameAndIdDevice = {
+                    for (final BluetoothDevice device in devices)
                       (device.platformName.isNotEmpty
                               ? device.platformName
-                              : 'SOIL-BANG-1'):
+                              : 'Unknown ${device.remoteId.str}'):
                           device.remoteId.str,
                   };
 
-                  if (_lastListDevice.isEmpty) {
+                  if (_listNameAndIdDevice.isEmpty) {
                     return _EmptyState(
                       onRetry: () => ref.invalidate(deviceScanProvider),
                     );
-                  }
-
-                  if (_selectedDeviceName == null ||
-                      !_lastListDevice.containsKey(_selectedDeviceName)) {
-                    _selectedDeviceName = _lastListDevice.entries.first.key;
+                  } else {
+                    _selectedDeviceName =
+                        _listNameAndIdDevice.entries.first.key;
                   }
 
                   return SingleChildScrollView(
@@ -63,7 +61,7 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
                       children: [
                         const SizedBox(height: 16),
                         DeviceSection(
-                          items: _lastListDevice.keys.toList(),
+                          items: _listNameAndIdDevice.keys.toList(),
                           selectedValue: _selectedDeviceName!,
                           onDeviceChanged: (value) {
                             setState(() => _selectedDeviceName = value);
@@ -74,7 +72,7 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
                           },
                           onConnectClick: () async {
                             final macAddress =
-                                _lastListDevice[_selectedDeviceName];
+                                _listNameAndIdDevice[_selectedDeviceName];
                             if (macAddress != null) {
                               await bluetoothService.connect(macAddress);
                               ref.invalidate(sensorServiceProvider);
@@ -87,7 +85,8 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
                           loading: () => const Padding(
                             padding: EdgeInsets.symmetric(vertical: 48),
                             child: _LoadingState(
-                              message: 'Reading sensor data...',
+                              message:
+                                  'Perform Data Sampling to Fetch New Data',
                             ),
                           ),
                           error: (error, stack) =>
@@ -158,52 +157,6 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
       ),
     );
   }
-
-  Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(bottom: BorderSide(color: AppColors.border)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Icons.spa_rounded,
-              color: AppColors.primary,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'SOIL-BANG',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              Text(
-                'Spectral Sensor Dashboard',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _LoadingState extends StatelessWidget {
@@ -216,7 +169,11 @@ class _LoadingState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const CircularProgressIndicator(color: AppColors.primary),
+          const Icon(
+            Icons.do_not_disturb_off_outlined,
+            color: AppColors.primary,
+            size: 32,
+          ),
           const SizedBox(height: 16),
           Text(
             message,
