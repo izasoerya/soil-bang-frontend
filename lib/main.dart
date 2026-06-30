@@ -1,5 +1,7 @@
+import 'package:bang_soil/theme/app_theme.dart';
 import 'package:bang_soil/views/dashboard_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 void main() {
@@ -21,8 +23,10 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(body: Center(child: DashboardPage())),
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.dark,
+      home: const Scaffold(body: DashboardPage()),
     );
   }
 }

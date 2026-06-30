@@ -1,9 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bang_soil/providers/bluetooth_provider.dart';
+import 'package:bang_soil/theme/app_theme.dart';
 import 'package:bang_soil/views/widgets/molecules/device_section.dart';
 import 'package:bang_soil/views/widgets/molecules/sensor_body_section.dart';
 import 'package:bang_soil/views/widgets/molecules/sensor_header_section.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class DashboardPage extends ConsumerStatefulWidget {
   const DashboardPage({super.key});
@@ -13,7 +14,7 @@ class DashboardPage extends ConsumerStatefulWidget {
 }
 
 class DashboardPageState extends ConsumerState<DashboardPage> {
-  late Map<String, String> _lastListDevice;
+  Map<String, String> _lastListDevice = {};
   String? _selectedDeviceName;
 
   @override
@@ -22,29 +23,6 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
     final scanState = ref.watch(deviceScanProvider);
     final sensorState = ref.watch(sensorServiceProvider);
 
-<<<<<<< Updated upstream
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      alignment: Alignment.center,
-      decoration: const BoxDecoration(color: Color.fromRGBO(15, 21, 26, 1)),
-      child: scanState.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => _errorPage(error.toString()),
-        data: (devices) {
-          _lastListDevice = {
-            for (var device in devices)
-              device.platformName.isNotEmpty
-                      ? device.platformName
-                      : "SOIL-BANG-1":
-                  device.remoteId.str,
-          };
-          if (_lastListDevice.isNotEmpty) {
-            _selectedDeviceName = _lastListDevice.entries.first.key;
-          } else {
-            return const Text('No bluetooth device found');
-          }
-=======
     return SafeArea(
       child: Container(
         width: double.infinity,
@@ -66,54 +44,44 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
                               : 'SOIL-BANG-1'):
                           device.remoteId.str,
                   };
->>>>>>> Stashed changes
 
-          return SingleChildScrollView(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                DeviceSection(
-                  items: _lastListDevice.keys.toList(),
-                  selectedValue: _selectedDeviceName!,
-                  onDeviceChanged: (String? deviceString) {
-                    setState(() {
-                      _selectedDeviceName = deviceString;
-                    });
-                    print('selected listDevice: $deviceString');
-                  },
-                  onRefreshClick: () {
-                    ref.invalidate(deviceScanProvider);
-                    setState(() {
-                      _selectedDeviceName = null;
-                    });
-                    print('Refresh clicked');
-                  },
-                  onConnectClick: () async {
-                    final macAddress = _lastListDevice[_selectedDeviceName];
-                    if (macAddress != null) {
-                      await bluetoothService.connect(macAddress);
-                      ref.invalidate(sensorServiceProvider);
-                      ref.invalidate(deviceServiceProvider);
-                    }
-                  },
-                ),
-                const SizedBox(height: 10),
+                  if (_lastListDevice.isEmpty) {
+                    return _EmptyState(
+                      onRetry: () => ref.invalidate(deviceScanProvider),
+                    );
+                  }
 
-                sensorState.when(
-                  error: (error, stack) => _errorPage(error.toString()),
-                  loading: () => const CircularProgressIndicator(),
-                  data: (sensor) {
-                    return Column(
+                  if (_selectedDeviceName == null ||
+                      !_lastListDevice.containsKey(_selectedDeviceName)) {
+                    _selectedDeviceName = _lastListDevice.entries.first.key;
+                  }
+
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.only(bottom: 32),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SensorHeaderSection(
-                          battery: 87.1,
-                          createdAt: DateTime.now(),
+                        const SizedBox(height: 16),
+                        DeviceSection(
+                          items: _lastListDevice.keys.toList(),
+                          selectedValue: _selectedDeviceName!,
+                          onDeviceChanged: (value) {
+                            setState(() => _selectedDeviceName = value);
+                          },
+                          onRefreshClick: () {
+                            ref.invalidate(deviceScanProvider);
+                            setState(() => _selectedDeviceName = null);
+                          },
+                          onConnectClick: () async {
+                            final macAddress =
+                                _lastListDevice[_selectedDeviceName];
+                            if (macAddress != null) {
+                              await bluetoothService.connect(macAddress);
+                              ref.invalidate(sensorServiceProvider);
+                              ref.invalidate(deviceServiceProvider);
+                            }
+                          },
                         ),
-<<<<<<< Updated upstream
-                        const SizedBox(height: 20),
-                        Container(
-                          margin: EdgeInsets.symmetric(
-=======
                         const SizedBox(height: 16),
                         sensorState.when(
                           loading: () => const Padding(
@@ -165,52 +133,66 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
                         const SizedBox(height: 24),
                         Padding(
                           padding: EdgeInsets.symmetric(
->>>>>>> Stashed changes
                             horizontal:
                                 MediaQuery.of(context).size.width * 0.05,
                           ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.graphic_eq, color: Colors.white),
-                              const Text(
-                                'Spectral Data',
-                                style: TextStyle(color: Colors.white),
-                              ),
-                            ],
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                await bluetoothService.sendCommand();
+                              },
+                              icon: const Icon(Icons.sensors_rounded, size: 18),
+                              label: const Text('Perform Data Sampling'),
+                            ),
                           ),
                         ),
-                        SensorBodySection(sensor: sensor),
                       ],
-                    );
-                  },
-                ),
-
-                SizedBox(height: 20),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color.fromRGBO(0, 150, 136, 1),
-                    foregroundColor: Colors.white,
-                    elevation: 4,
-                    shadowColor: Colors.black.withOpacity(0.5),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 14,
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: () async {
-                    await bluetoothService.sendCommand();
-                  },
-                  child: const Text('Perform Data Sampling'),
-                ),
-<<<<<<< Updated upstream
-              ],
+                  );
+                },
+              ),
             ),
-          );
-        },
-=======
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border(bottom: BorderSide(color: AppColors.border)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.spa_rounded,
+              color: AppColors.primary,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'SOIL-BANG',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                ),
               ),
               Text(
                 'Spectral Sensor Dashboard',
@@ -219,16 +201,134 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
             ],
           ),
         ],
->>>>>>> Stashed changes
       ),
     );
   }
+}
 
-  Widget _errorPage(String errorMsg) {
+class _LoadingState extends StatelessWidget {
+  const _LoadingState({required this.message});
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
     return Center(
-      child: Text(
-        'Fetching bluetooth device error: $errorMsg',
-        style: const TextStyle(color: Colors.red),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CircularProgressIndicator(color: AppColors.primary),
+          const SizedBox(height: 16),
+          Text(
+            message,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({required this.message});
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: AppColors.red.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(
+                Icons.error_outline_rounded,
+                color: AppColors.red,
+                size: 28,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Something went wrong',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.onRetry});
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Icon(
+                Icons.bluetooth_searching_rounded,
+                color: AppColors.primary,
+                size: 32,
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'No device found',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Make sure your SOIL-BANG sensor\nis powered on and nearby.',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded, size: 16),
+              label: const Text('Scan Again'),
+            ),
+          ],
+        ),
       ),
     );
   }

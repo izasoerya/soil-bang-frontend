@@ -1,4 +1,5 @@
 import 'package:bang_soil/models/sensor.dart';
+import 'package:bang_soil/theme/app_theme.dart';
 import 'package:bang_soil/views/widgets/atoms/sensor_value_card.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -10,7 +11,6 @@ class SensorBodySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Process and sort all 18 channel data spots
     final allSpots = sensor.spectralChannels.entries.map((entry) {
       final wavelength = double.parse(entry.key.replaceAll(' nm', ''));
       return FlSpot(wavelength, entry.value);
@@ -131,9 +131,9 @@ class SensorBodySection extends StatelessWidget {
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
-              childAspectRatio: 1.5,
-              mainAxisSpacing: 4,
-              crossAxisSpacing: 4,
+              childAspectRatio: 1.6,
+              mainAxisSpacing: 6,
+              crossAxisSpacing: 6,
             ),
             itemCount: sensor.spectralChannels.length,
             itemBuilder: (context, index) {
@@ -146,7 +146,72 @@ class SensorBodySection extends StatelessWidget {
     );
   }
 
-  /// Helper configuration template to share chart setups
+  Widget _buildChart(
+    BuildContext context,
+    List<FlSpot> spots, {
+    required double minX,
+    required double maxX,
+    required Color lineColor,
+    required double intervalX,
+  }) {
+    final hPad = MediaQuery.of(context).size.width * 0.05;
+    return Container(
+      width: double.infinity,
+      height: MediaQuery.of(context).size.height * 0.22,
+      padding: const EdgeInsets.only(right: 20, left: 4, top: 8, bottom: 4),
+      margin: EdgeInsets.symmetric(horizontal: hPad),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: LineChart(
+        _buildChartData(
+          spots: spots,
+          minX: minX,
+          maxX: maxX,
+          lineColor: lineColor,
+          intervalX: intervalX,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, String subtitle, Color accentColor) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+      child: Row(
+        children: [
+          Container(
+            width: 3,
+            height: 16,
+            decoration: BoxDecoration(
+              color: accentColor,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            title,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   LineChartData _buildChartData({
     required List<FlSpot> spots,
     required double minX,
@@ -155,7 +220,12 @@ class SensorBodySection extends StatelessWidget {
     required double intervalX,
   }) {
     return LineChartData(
-      gridData: const FlGridData(show: true, drawVerticalLine: false),
+      gridData: FlGridData(
+        show: true,
+        drawVerticalLine: false,
+        getDrawingHorizontalLine: (_) =>
+            const FlLine(color: AppColors.border, strokeWidth: 0.5),
+      ),
       titlesData: FlTitlesData(
         topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         rightTitles: const AxisTitles(
@@ -168,17 +238,17 @@ class SensorBodySection extends StatelessWidget {
         leftTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
-            reservedSize: 35,
-            getTitlesWidget: (value, meta) {
-              return Text(
-                value.toStringAsFixed(0),
-                style: const TextStyle(color: Colors.white60, fontSize: 9),
-                textAlign: TextAlign.center,
-              );
-            },
+            reservedSize: 38,
+            getTitlesWidget: (value, _) => Text(
+              value.toStringAsFixed(0),
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 9,
+              ),
+              textAlign: TextAlign.right,
+            ),
           ),
         ),
-        // X-Axis Labels configuration
         bottomTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
@@ -193,7 +263,10 @@ class SensorBodySection extends StatelessWidget {
                 return const SizedBox.shrink();
               return Text(
                 '${value.toInt()}',
-                style: const TextStyle(color: Colors.white60, fontSize: 9),
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 9,
+                ),
               );
             },
           ),
@@ -219,7 +292,7 @@ class SensorBodySection extends StatelessWidget {
           isCurved: true,
           curveSmoothness: 0.25,
           color: lineColor,
-          barWidth: 2.5,
+          barWidth: 2,
           isStrokeCapRound: true,
           dotData: const FlDotData(show: true),
           belowBarData: BarAreaData(
@@ -227,26 +300,14 @@ class SensorBodySection extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [lineColor.withOpacity(0.15), lineColor.withOpacity(0.0)],
+              colors: [
+                lineColor.withValues(alpha: 0.15),
+                lineColor.withValues(alpha: 0.0),
+              ],
             ),
           ),
         ),
       ],
-    );
-  }
-
-  /// Clean section label renderer helper
-  Widget _buildSectionHeader(String title, Color color) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 20.0, bottom: 4.0, top: 8.0),
-      child: Text(
-        title,
-        style: TextStyle(
-          color: color,
-          fontSize: 13,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
     );
   }
 }

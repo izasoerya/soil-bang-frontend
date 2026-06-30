@@ -1,3 +1,4 @@
+import 'package:bang_soil/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 class SensorValueCard extends StatelessWidget {
@@ -7,21 +8,33 @@ class SensorValueCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      color: const Color.fromRGBO(20, 26, 33, 1),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.border),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
             entry.key,
-            style: const TextStyle(color: Colors.grey, fontSize: 12),
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
+          const SizedBox(height: 4),
           Text(
             entry.value.toStringAsFixed(2),
             style: const TextStyle(
-              color: Colors.white,
+              color: AppColors.textPrimary,
               fontFamily: 'monospace',
-              fontSize: 16,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
