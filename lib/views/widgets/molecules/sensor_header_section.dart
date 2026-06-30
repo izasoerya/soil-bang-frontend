@@ -11,8 +11,6 @@ class SensorHeaderSection extends StatelessWidget {
   final double battery;
   final DateTime createdAt;
 
-<<<<<<< Updated upstream
-=======
   IconData _batteryIcon() {
     if (battery >= 90) return Icons.battery_full_rounded;
     if (battery >= 70) return Icons.battery_5_bar_rounded;
@@ -29,7 +27,6 @@ class SensorHeaderSection extends StatelessWidget {
     return AppColors.red;
   }
 
->>>>>>> Stashed changes
   @override
   Widget build(BuildContext context) {
     final hPad = MediaQuery.of(context).size.width * 0.05;

@@ -5,8 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 void main() {
-<<<<<<< Updated upstream
-=======
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -14,7 +12,6 @@ void main() {
       statusBarIconBrightness: Brightness.light,
     ),
   );
->>>>>>> Stashed changes
   runApp(ProviderScope(child: const MainApp()));
 }
 
