@@ -56,12 +56,53 @@ class _DeviceSectionState extends State<DeviceSection> {
             selectedValue: _selectedDevice,
             onChanged: _onDeviceChanged,
           ),
+<<<<<<< Updated upstream
           Container(
             padding: EdgeInsets.symmetric(horizontal: 10, vertical: 1),
             decoration: BoxDecoration(
               color: Color.fromRGBO(30, 40, 51, 1),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: Colors.grey.shade600, width: 0.5),
+=======
+          child: Icon(icon, color: AppColors.textSecondary, size: 20),
+        ),
+      ),
+    );
+  }
+}
+
+class _ConnectBtn extends StatelessWidget {
+  const _ConnectBtn({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppColors.primary,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.bluetooth_connected_rounded,
+              color: Colors.white,
+              size: 16,
+            ),
+            SizedBox(width: 6),
+            Text(
+              'Connect',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+>>>>>>> Stashed changes
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,

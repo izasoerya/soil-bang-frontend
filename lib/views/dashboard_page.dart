@@ -22,6 +22,7 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
     final scanState = ref.watch(deviceScanProvider);
     final sensorState = ref.watch(sensorServiceProvider);
 
+<<<<<<< Updated upstream
     return Container(
       width: double.infinity,
       height: double.infinity,
@@ -43,6 +44,29 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
           } else {
             return const Text('No bluetooth device found');
           }
+=======
+    return SafeArea(
+      child: Container(
+        width: double.infinity,
+        height: double.infinity,
+        color: AppColors.background,
+        child: Column(
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: scanState.when(
+                loading: () =>
+                    const _LoadingState(message: 'Scanning for devices...'),
+                error: (error, stack) => _ErrorState(message: error.toString()),
+                data: (devices) {
+                  _lastListDevice = {
+                    for (var device in devices)
+                      (device.platformName.isNotEmpty
+                              ? device.platformName
+                              : 'SOIL-BANG-1'):
+                          device.remoteId.str,
+                  };
+>>>>>>> Stashed changes
 
           return SingleChildScrollView(
             child: Column(
@@ -85,9 +109,63 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
                           battery: 87.1,
                           createdAt: DateTime.now(),
                         ),
+<<<<<<< Updated upstream
                         const SizedBox(height: 20),
                         Container(
                           margin: EdgeInsets.symmetric(
+=======
+                        const SizedBox(height: 16),
+                        sensorState.when(
+                          loading: () => const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 48),
+                            child: _LoadingState(
+                              message: 'Reading sensor data...',
+                            ),
+                          ),
+                          error: (error, stack) =>
+                              _ErrorState(message: error.toString()),
+                          data: (sensor) => Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SensorHeaderSection(
+                                battery: 87.1,
+                                createdAt: DateTime.now(),
+                              ),
+                              const SizedBox(height: 20),
+                              Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal:
+                                      MediaQuery.of(context).size.width * 0.05,
+                                  vertical: 4,
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(
+                                      Icons.graphic_eq_rounded,
+                                      color: AppColors.primary,
+                                      size: 18,
+                                    ),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Spectral Data',
+                                      style: TextStyle(
+                                        color: AppColors.textPrimary,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              SensorBodySection(sensor: sensor),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+>>>>>>> Stashed changes
                             horizontal:
                                 MediaQuery.of(context).size.width * 0.05,
                           ),
@@ -127,10 +205,21 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
                   },
                   child: const Text('Perform Data Sampling'),
                 ),
+<<<<<<< Updated upstream
               ],
             ),
           );
         },
+=======
+              ),
+              Text(
+                'Spectral Sensor Dashboard',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+              ),
+            ],
+          ),
+        ],
+>>>>>>> Stashed changes
       ),
     );
   }

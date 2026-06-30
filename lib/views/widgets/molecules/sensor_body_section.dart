@@ -16,13 +16,20 @@ class SensorBodySection extends StatelessWidget {
       return FlSpot(wavelength, entry.value);
     }).toList()..sort((a, b) => a.x.compareTo(b.x));
 
+<<<<<<< Updated upstream
     // 2. Split spots based on spectrum wavelength domain cutoffs
     final visibleSpots = allSpots.where((spot) => spot.x <= 705).toList();
     final irSpots = allSpots.where((spot) => spot.x >= 730).toList();
+=======
+    final visibleSpots = allSpots.where((s) => s.x <= 705).toList();
+    final irSpots = allSpots.where((s) => s.x >= 730).toList();
+    final hPad = MediaQuery.of(context).size.width * 0.05;
+>>>>>>> Stashed changes
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+<<<<<<< Updated upstream
         // ==========================================
         // CHART 1: VISIBLE LIGHT SPECTRUM (UV-VIS)
         // ==========================================
@@ -69,15 +76,56 @@ class SensorBodySection extends StatelessWidget {
               intervalX: 50,
             ),
           ),
+=======
+        _buildSectionHeader(
+          'Visible Spectrum',
+          '410nm – 705nm',
+          AppColors.cyanLine,
+        ),
+        _buildChart(
+          context,
+          visibleSpots,
+          minX: 400,
+          maxX: 710,
+          lineColor: AppColors.cyanLine,
+          intervalX: 50,
+>>>>>>> Stashed changes
         ),
 
         const SizedBox(height: 20),
         _buildSectionHeader('Raw Channel Matrix (μW/cm²)', Colors.white),
 
+<<<<<<< Updated upstream
         Container(
           margin: EdgeInsets.symmetric(
             horizontal: MediaQuery.of(context).size.width * 0.05,
           ),
+=======
+        _buildSectionHeader(
+          'Near-Infrared',
+          '730nm – 940nm',
+          AppColors.redLine,
+        ),
+        _buildChart(
+          context,
+          irSpots,
+          minX: 720,
+          maxX: 950,
+          lineColor: AppColors.redLine,
+          intervalX: 50,
+        ),
+
+        const SizedBox(height: 24),
+
+        _buildSectionHeader(
+          'Raw Channel Matrix',
+          'μW/cm²',
+          AppColors.textSecondary,
+        ),
+        const SizedBox(height: 8),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: hPad),
+>>>>>>> Stashed changes
           child: GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -113,7 +161,10 @@ class SensorBodySection extends StatelessWidget {
         rightTitles: const AxisTitles(
           sideTitles: SideTitles(showTitles: false),
         ),
+<<<<<<< Updated upstream
         // Y-Axis Labels configuration
+=======
+>>>>>>> Stashed changes
         leftTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
@@ -133,7 +184,11 @@ class SensorBodySection extends StatelessWidget {
             showTitles: true,
             reservedSize: 22,
             interval: intervalX,
+<<<<<<< Updated upstream
             getTitlesWidget: (value, meta) {
+=======
+            getTitlesWidget: (value, _) {
+>>>>>>> Stashed changes
               if (value == minX || value == maxX)
                 return const SizedBox.shrink();
               return Text(
@@ -147,8 +202,13 @@ class SensorBodySection extends StatelessWidget {
       borderData: FlBorderData(
         show: true,
         border: const Border(
+<<<<<<< Updated upstream
           bottom: BorderSide(color: Colors.white24, width: 1),
           left: BorderSide(color: Colors.white24, width: 1),
+=======
+          bottom: BorderSide(color: AppColors.border),
+          left: BorderSide(color: AppColors.border),
+>>>>>>> Stashed changes
         ),
       ),
       minX: minX,
