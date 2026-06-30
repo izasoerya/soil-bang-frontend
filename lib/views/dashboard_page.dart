@@ -1,4 +1,7 @@
+import 'package:bang_soil/models/sensor.dart';
 import 'package:bang_soil/providers/bluetooth_provider.dart';
+import 'package:bang_soil/services/csv_export_service.dart';
+import 'package:bang_soil/services/database_service.dart';
 import 'package:bang_soil/theme/app_theme.dart';
 import 'package:bang_soil/views/widgets/molecules/device_section.dart';
 import 'package:bang_soil/views/widgets/molecules/sensor_body_section.dart';
@@ -17,11 +20,69 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
   Map<String, String> _lastListDevice = {};
   String? _selectedDeviceName;
 
+  final _csvExportService = CsvExportService();
+
+  Future<void> _handleExportCSV() async {
+    try {
+      await _csvExportService.exportToCSV();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceFirst('Exception: ', '')),
+            backgroundColor: AppColors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleResetData() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text(
+          'Reset Data',
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
+        content: const Text(
+          'Semua data sensor yang tersimpan akan dihapus permanen. Yakin ingin melanjutkan?',
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.red),
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await DatabaseService.instance.deleteAllReadings();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Data berhasil direset')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final bluetoothService = ref.watch(bluetoothServiceProvider);
     final scanState = ref.watch(deviceScanProvider);
     final sensorState = ref.watch(sensorServiceProvider);
+
+    ref.listen<AsyncValue<Sensor>>(sensorServiceProvider, (_, next) {
+      next.whenData((sensor) => DatabaseService.instance.insertSensor(sensor));
+    });
 
     return SafeArea(
       child: Container(
@@ -200,11 +261,60 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
               ),
             ],
           ),
+          const Spacer(),
+          PopupMenuButton<_HeaderAction>(
+            icon: const Icon(
+              Icons.more_vert_rounded,
+              color: AppColors.textSecondary,
+            ),
+            color: AppColors.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: AppColors.border),
+            ),
+            onSelected: (action) {
+              if (action == _HeaderAction.exportCSV) {
+                _handleExportCSV();
+              } else if (action == _HeaderAction.resetData) {
+                _handleResetData();
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: _HeaderAction.exportCSV,
+                child: Row(
+                  children: [
+                    Icon(Icons.download_rounded, size: 18, color: AppColors.primary),
+                    SizedBox(width: 12),
+                    Text(
+                      'Export CSV',
+                      style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: _HeaderAction.resetData,
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.red),
+                    SizedBox(width: 12),
+                    Text(
+                      'Reset Data',
+                      style: TextStyle(color: AppColors.red, fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 }
+
+enum _HeaderAction { exportCSV, resetData }
 
 class _LoadingState extends StatelessWidget {
   const _LoadingState({required this.message});
