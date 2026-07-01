@@ -67,9 +67,9 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
     if (confirmed == true) {
       await DatabaseService.instance.deleteAllReadings();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Data berhasil direset')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Data berhasil direset')));
       }
     }
   }
@@ -94,7 +94,8 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
             _buildHeader(),
             Expanded(
               child: scanState.when(
-                loading: () => const _LoadingState(message: 'Scanning for devices...'),
+                loading: () =>
+                    const _LoadingState(message: 'Scanning for devices...'),
                 error: (error, stack) => _ErrorState(message: error.toString()),
                 data: (devices) {
                   _lastListDevice = {
@@ -146,7 +147,9 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
                         sensorState.when(
                           loading: () => const Padding(
                             padding: EdgeInsets.symmetric(vertical: 48),
-                            child: _LoadingState(message: 'Reading sensor data...'),
+                            child: _LoadingState(
+                              message: 'Reading sensor data...',
+                            ),
                           ),
                           error: (error, stack) =>
                               _ErrorState(message: error.toString()),
@@ -254,10 +257,7 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
               ),
               Text(
                 'Spectral Sensor Dashboard',
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 11,
-                ),
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
               ),
             ],
           ),
@@ -284,11 +284,18 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
                 value: _HeaderAction.exportCSV,
                 child: Row(
                   children: [
-                    Icon(Icons.download_rounded, size: 18, color: AppColors.primary),
+                    Icon(
+                      Icons.download_rounded,
+                      size: 18,
+                      color: AppColors.primary,
+                    ),
                     SizedBox(width: 12),
                     Text(
                       'Export CSV',
-                      style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 14,
+                      ),
                     ),
                   ],
                 ),
@@ -297,7 +304,11 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
                 value: _HeaderAction.resetData,
                 child: Row(
                   children: [
-                    Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.red),
+                    Icon(
+                      Icons.delete_outline_rounded,
+                      size: 18,
+                      color: AppColors.red,
+                    ),
                     SizedBox(width: 12),
                     Text(
                       'Reset Data',

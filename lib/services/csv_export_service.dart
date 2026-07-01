@@ -6,11 +6,29 @@ import 'package:share_plus/share_plus.dart';
 
 class CsvExportService {
   static const List<String> _columns = [
-    'id', 'created_at',
-    'nm410', 'nm435', 'nm460', 'nm485', 'nm510', 'nm535',
-    'nm560', 'nm585', 'nm610', 'nm645', 'nm680', 'nm705',
-    'nm730', 'nm760', 'nm810', 'nm860', 'nm900', 'nm940',
-    'as72651_temp', 'as72652_temp', 'as72653_temp',
+    'id',
+    'created_at',
+    'nm410',
+    'nm435',
+    'nm460',
+    'nm485',
+    'nm510',
+    'nm535',
+    'nm560',
+    'nm585',
+    'nm610',
+    'nm645',
+    'nm680',
+    'nm705',
+    'nm730',
+    'nm760',
+    'nm810',
+    'nm860',
+    'nm900',
+    'nm940',
+    'as72651_temp',
+    'as72652_temp',
+    'as72653_temp',
   ];
 
   Future<void> exportToCSV() async {
