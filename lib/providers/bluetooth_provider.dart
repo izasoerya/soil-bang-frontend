@@ -27,24 +27,20 @@ final deviceScanProvider = FutureProvider.autoDispose<List<BluetoothDevice>>((
 });
 
 final sensorServiceProvider = StreamProvider<Sensor>((ref) async* {
-  // Pull the active stream directly from the service
   final bleService = ref.watch(bluetoothServiceProvider);
   final stream = bleService.getStream();
 
-  // Listen directly to the raw byte chunks
   await for (final List<int> bytes in stream) {
     if (bytes.isEmpty) continue;
 
     try {
       final String jsonStr = String.fromCharCodes(bytes).trim();
-      print("🚀 RIVERPOD PARSER CAUGHT: $jsonStr");
-
       final Map<String, dynamic> jsonMap = jsonDecode(jsonStr);
-
-      // Match the "sensor" discriminator and yield the data
       if (jsonMap["type"] == "sensor") {
         yield Sensor.fromJson(jsonMap);
       }
+    } on FormatException catch (e) {
+      print('Bad Packet: $e');
     } catch (e) {
       print('Parser Error: $e');
     }
@@ -52,16 +48,18 @@ final sensorServiceProvider = StreamProvider<Sensor>((ref) async* {
 });
 
 final deviceServiceProvider = StreamProvider<Device>((ref) async* {
-  final stream = ref.watch(rawBluetoothStreamProvider);
-  final Stream<String> jsonStream = stream
-      .transform(utf8.decoder)
-      .transform(const LineSplitter());
+  final bleService = ref.watch(bluetoothServiceProvider);
+  final stream = bleService.getStream();
 
-  await for (final String json in jsonStream) {
+  await for (final List<int> bytes in stream) {
+    if (bytes.isEmpty) continue;
+
     try {
-      final Map<String, dynamic> jsonMap = jsonDecode(json);
-      if (jsonMap["type"] != "device") continue;
-      yield Device.fromJson(jsonMap);
+      final String jsonStr = String.fromCharCodes(bytes).trim();
+      final Map<String, dynamic> jsonMap = jsonDecode(jsonStr);
+      if (jsonMap["type"] == "device") {
+        yield Device.fromJson(jsonMap);
+      }
     } on FormatException catch (e) {
       print('Bad Packet: $e');
     } catch (e) {
