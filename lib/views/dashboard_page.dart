@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:bang_soil/models/sensor.dart';
 import 'package:bang_soil/providers/bluetooth_provider.dart';
 import 'package:bang_soil/services/csv_export_service.dart';
@@ -79,6 +81,8 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
     final bluetoothService = ref.watch(bluetoothServiceProvider);
     final scanState = ref.watch(deviceScanProvider);
     final sensorState = ref.watch(sensorServiceProvider);
+    final deviceState = ref.watch(deviceServiceProvider);
+    final deviceBattery = deviceState.value?.battery ?? 0.0;
 
     ref.listen<AsyncValue<Sensor>>(sensorServiceProvider, (_, next) {
       next.whenData((sensor) => DatabaseService.instance.insertSensor(sensor));
@@ -157,7 +161,7 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               SensorHeaderSection(
-                                battery: 87.1,
+                                battery: deviceBattery,
                                 createdAt: DateTime.now(),
                               ),
                               const SizedBox(height: 20),
@@ -275,6 +279,8 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
             onSelected: (action) {
               if (action == _HeaderAction.exportCSV) {
                 _handleExportCSV();
+              } else if (action == _HeaderAction.debugRawBluetooth) {
+                _showRawBluetoothDebugDialog();
               } else if (action == _HeaderAction.resetData) {
                 _handleResetData();
               }
@@ -292,6 +298,26 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
                     SizedBox(width: 12),
                     Text(
                       'Export CSV',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: _HeaderAction.debugRawBluetooth,
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.bug_report_rounded,
+                      size: 18,
+                      color: AppColors.textSecondary,
+                    ),
+                    SizedBox(width: 12),
+                    Text(
+                      'Debug Raw Bluetooth',
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 14,
@@ -323,9 +349,123 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
       ),
     );
   }
+
+  void _showRawBluetoothDebugDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => const _RawBluetoothDebugDialog(),
+    );
+  }
 }
 
-enum _HeaderAction { exportCSV, resetData }
+enum _HeaderAction { exportCSV, debugRawBluetooth, resetData }
+
+class _RawBluetoothDebugDialog extends ConsumerWidget {
+  const _RawBluetoothDebugDialog();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sensorState = ref.watch(sensorServiceProvider);
+    final deviceState = ref.watch(deviceServiceProvider);
+
+    return AlertDialog(
+      backgroundColor: AppColors.surface,
+      title: const Text(
+        'Bluetooth Debug',
+        style: TextStyle(color: AppColors.textPrimary),
+      ),
+      content: SizedBox(
+        width: 340,
+        height: 320,
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.background,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _DebugPayloadCard(
+                  title: 'Sensor Provider',
+                  payload: sensorState.when(
+                    data: (sensor) => const JsonEncoder.withIndent(
+                      '  ',
+                    ).convert(sensor.toJson()),
+                    loading: () => 'Waiting for sensor data...',
+                    error: (error, stack) => 'Sensor error: $error',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _DebugPayloadCard(
+                  title: 'Device Provider',
+                  payload: deviceState.when(
+                    data: (device) => const JsonEncoder.withIndent(
+                      '  ',
+                    ).convert(device.toJson()),
+                    loading: () => 'Waiting for device data...',
+                    error: (error, stack) => 'Device error: $error',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Close'),
+        ),
+      ],
+    );
+  }
+}
+
+class _DebugPayloadCard extends StatelessWidget {
+  const _DebugPayloadCard({required this.title, required this.payload});
+
+  final String title;
+  final String payload;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: SelectableText(
+            payload,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 12,
+              height: 1.4,
+              fontFamily: 'monospace',
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 class _LoadingState extends StatelessWidget {
   const _LoadingState({required this.message});
