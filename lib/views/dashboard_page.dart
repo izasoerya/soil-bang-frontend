@@ -390,23 +390,51 @@ class _RawBluetoothDebugDialog extends ConsumerWidget {
               children: [
                 _DebugPayloadCard(
                   title: 'Sensor Provider',
-                  payload: sensorState.when(
-                    data: (sensor) => const JsonEncoder.withIndent(
-                      '  ',
-                    ).convert(sensor.toJson()),
-                    loading: () => 'Waiting for sensor data...',
-                    error: (error, stack) => 'Sensor error: $error',
+                  payload: sensorState.maybeWhen(
+                    data: (sensor) {
+                      print('✓ Sensor Data Loaded');
+                      return const JsonEncoder.withIndent(
+                        '  ',
+                      ).convert(sensor.toJson());
+                    },
+                    loading: () {
+                      print('🔄 Sensor Loading');
+                      return 'Loading sensor data...';
+                    },
+                    error: (error, stack) {
+                      print('✗ Sensor Error: $error');
+                      return 'Sensor error: $error';
+                    },
+                    orElse: () => 'Unknown state',
                   ),
                 ),
                 const SizedBox(height: 12),
                 _DebugPayloadCard(
                   title: 'Device Provider',
-                  payload: deviceState.when(
-                    data: (device) => const JsonEncoder.withIndent(
-                      '  ',
-                    ).convert(device.toJson()),
-                    loading: () => 'Waiting for device data...',
-                    error: (error, stack) => 'Device error: $error',
+                  payload: deviceState.maybeWhen(
+                    data: (device) {
+                      print('✓ Device Data Loaded');
+                      return const JsonEncoder.withIndent(
+                        '  ',
+                      ).convert(device.toJson());
+                    },
+                    loading: () {
+                      print('🔄 Device Loading');
+                      return 'Loading device data...';
+                    },
+                    error: (error, stack) {
+                      print('✗ Device Error: $error');
+                      return 'Device error: $error';
+                    },
+                    orElse: () => 'Unknown state',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'State: ${sensorState.runtimeType} / ${deviceState.runtimeType}',
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 11,
                   ),
                 ),
               ],
@@ -473,6 +501,7 @@ class _LoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print('loading');
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
