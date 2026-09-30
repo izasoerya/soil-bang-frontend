@@ -148,7 +148,7 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
           _lastFetchTime = sensor.createdAt;
         });
 
-        if (_isSampling) {
+        if (_isSampling && context.mounted) {
           setState(() => _isSampling = false);
           AppModal.showSuccess(
             context: context,
