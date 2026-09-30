@@ -2,6 +2,7 @@ import 'package:bang_soil/models/sensor.dart';
 import 'package:bang_soil/providers/bluetooth_provider.dart';
 import 'package:bang_soil/services/database_service.dart';
 import 'package:bang_soil/theme/app_theme.dart';
+import 'package:bang_soil/views/widgets/atoms/modal.dart';
 import 'package:bang_soil/views/widgets/molecules/app_header_section.dart';
 import 'package:bang_soil/views/widgets/molecules/device_section.dart';
 import 'package:bang_soil/views/widgets/molecules/sensor_body_section.dart';
@@ -19,6 +20,87 @@ class DashboardPage extends ConsumerStatefulWidget {
 class DashboardPageState extends ConsumerState<DashboardPage> {
   Map<String, String> _lastListDevice = {};
   String? _selectedDeviceName;
+  bool _isSampling = false;
+
+  Future<void> _handleSampling(dynamic bluetoothService) async {
+    final confirmed = await AppModal.showConfirmation(
+      context: context,
+      title: 'Sampling Confirmation',
+      message: 'Are you sure you want to perform data sampling?',
+      confirmText: 'Confirm',
+      cancelText: 'Cancel',
+      icon: Icons.sensors_rounded,
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    if (!bluetoothService.isConnected) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Device not connected. Please connect first.'),
+          backgroundColor: AppColors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isSampling = true);
+
+    final success = await bluetoothService.sendCommand();
+    if (!mounted) return;
+
+    if (!success) {
+      setState(() => _isSampling = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to send sampling command.'),
+          backgroundColor: AppColors.red,
+        ),
+      );
+      return;
+    }
+
+    // Safety timeout in case the device does not respond within 15 seconds
+    Future.delayed(const Duration(seconds: 15), () {
+      if (_isSampling && mounted) {
+        setState(() => _isSampling = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content:
+                Text('Sampling timed out. No response received from device.'),
+            backgroundColor: AppColors.amber,
+          ),
+        );
+      }
+    });
+  }
+
+  bool _isManualScanning = false;
+
+  Future<void> _handleScanDevices() async {
+    if (_isManualScanning) return;
+    setState(() {
+      _isManualScanning = true;
+      _selectedDeviceName = null;
+    });
+    try {
+      ref.invalidate(deviceScanProvider);
+      await ref.read(deviceScanProvider.future);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Scan failed: $e'),
+            backgroundColor: AppColors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isManualScanning = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +111,18 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
     final deviceBattery = deviceState.value?.battery ?? 0.0;
 
     ref.listen<AsyncValue<Sensor>>(sensorServiceProvider, (_, next) {
-      next.whenData((sensor) => DatabaseService.instance.insertSensor(sensor));
+      next.whenData((sensor) {
+        DatabaseService.instance.insertSensor(sensor);
+        if (_isSampling && mounted) {
+          setState(() => _isSampling = false);
+          AppModal.showSuccess(
+            context: context,
+            title: 'Sampling Successful',
+            message: 'Success taking data',
+            closeText: 'Close',
+          );
+        }
+      });
     });
 
     return SafeArea(
@@ -41,11 +134,32 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
           children: [
             AppHeaderSection(),
             Expanded(
-              child: scanState.when(
-                loading: () =>
-                    const _LoadingState(message: 'Scanning for devices...'),
-                error: (error, stack) => _ErrorState(message: error.toString()),
-                data: (devices) {
+              child: Builder(
+                builder: (context) {
+                  final isScanning = _isManualScanning ||
+                      scanState.isLoading ||
+                      scanState.isRefreshing;
+
+                  // 1. Error state when no data exists
+                  if (scanState.hasError &&
+                      !isScanning &&
+                      !scanState.hasValue) {
+                    return _ErrorState(
+                      message: scanState.error.toString(),
+                      onRetry: _handleScanDevices,
+                    );
+                  }
+
+                  // 2. Initial loading state (no data yet)
+                  if (scanState.isLoading && !scanState.hasValue) {
+                    return _EmptyState(
+                      isScanning: true,
+                      onRetry: _handleScanDevices,
+                    );
+                  }
+
+                  // 3. Process devices
+                  final devices = scanState.value ?? [];
                   _lastListDevice = {
                     for (var device in devices)
                       (device.platformName.isNotEmpty
@@ -54,9 +168,11 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
                           device.remoteId.str,
                   };
 
+                  // 4. Empty state or active rescan
                   if (_lastListDevice.isEmpty) {
                     return _EmptyState(
-                      onRetry: () => ref.invalidate(deviceScanProvider),
+                      isScanning: isScanning,
+                      onRetry: _handleScanDevices,
                     );
                   }
 
@@ -77,10 +193,7 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
                           onDeviceChanged: (value) {
                             setState(() => _selectedDeviceName = value);
                           },
-                          onRefreshClick: () {
-                            ref.invalidate(deviceScanProvider);
-                            setState(() => _selectedDeviceName = null);
-                          },
+                          onRefreshClick: _handleScanDevices,
                           onConnectClick: () async {
                             final macAddress =
                                 _lastListDevice[_selectedDeviceName];
@@ -148,11 +261,27 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
                           child: SizedBox(
                             width: double.infinity,
                             child: ElevatedButton.icon(
-                              onPressed: () async {
-                                await bluetoothService.sendCommand();
-                              },
-                              icon: const Icon(Icons.sensors_rounded, size: 18),
-                              label: const Text('Perform Data Sampling'),
+                              onPressed: _isSampling
+                                  ? null
+                                  : () => _handleSampling(bluetoothService),
+                              icon: _isSampling
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.sensors_rounded,
+                                      size: 18,
+                                    ),
+                              label: Text(
+                                _isSampling
+                                    ? 'Sampling in progress...'
+                                    : 'Perform Data Sampling',
+                              ),
                             ),
                           ),
                         ),
@@ -195,8 +324,9 @@ class _LoadingState extends StatelessWidget {
 }
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message});
+  const _ErrorState({required this.message, this.onRetry});
   final String message;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -237,6 +367,14 @@ class _ErrorState extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
+            if (onRetry != null) ...[
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh_rounded, size: 16),
+                label: const Text('Try Again'),
+              ),
+            ],
           ],
         ),
       ),
@@ -244,9 +382,53 @@ class _ErrorState extends StatelessWidget {
   }
 }
 
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onRetry});
+class _EmptyState extends StatefulWidget {
+  const _EmptyState({
+    required this.isScanning,
+    required this.onRetry,
+  });
+
+  final bool isScanning;
   final VoidCallback onRetry;
+
+  @override
+  State<_EmptyState> createState() => _EmptyStateState();
+}
+
+class _EmptyStateState extends State<_EmptyState>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    );
+    if (widget.isScanning) {
+      _controller.repeat();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _EmptyState oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isScanning != oldWidget.isScanning) {
+      if (widget.isScanning) {
+        _controller.repeat();
+      } else {
+        _controller.stop();
+        _controller.reset();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -256,41 +438,136 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Icon(
-                Icons.bluetooth_searching_rounded,
-                color: AppColors.primary,
-                size: 32,
-              ),
+            _RadarPulseIcon(
+              animation: _controller,
+              isScanning: widget.isScanning,
             ),
-            const SizedBox(height: 20),
-            const Text(
-              'No device found',
-              style: TextStyle(
+            const SizedBox(height: 24),
+            Text(
+              widget.isScanning ? 'Scanning for devices...' : 'No device found',
+              style: const TextStyle(
                 color: AppColors.textPrimary,
-                fontSize: 17,
+                fontSize: 18,
                 fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Make sure your SOIL-BANG sensor\nis powered on and nearby.',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            Text(
+              widget.isScanning
+                  ? 'Searching for nearby SOIL-BANG sensors...'
+                  : 'Make sure your SOIL-BANG sensor\nis powered on and nearby.',
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+                height: 1.4,
+              ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 28),
             ElevatedButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh_rounded, size: 16),
-              label: const Text('Scan Again'),
+              onPressed: widget.isScanning ? null : widget.onRetry,
+              icon: widget.isScanning
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.refresh_rounded, size: 16),
+              label: Text(widget.isScanning ? 'Scanning...' : 'Scan Again'),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RadarPulseIcon extends StatelessWidget {
+  const _RadarPulseIcon({
+    required this.animation,
+    required this.isScanning,
+  });
+
+  final Animation<double> animation;
+  final bool isScanning;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isScanning) {
+      return Container(
+        width: 76,
+        height: 76,
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: const Icon(
+          Icons.bluetooth_searching_rounded,
+          color: AppColors.primary,
+          size: 36,
+        ),
+      );
+    }
+
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        final progress = animation.value;
+        final wave1 = progress;
+        final wave2 = (progress + 0.5) % 1.0;
+
+        return SizedBox(
+          width: 130,
+          height: 130,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              _buildWaveRing(wave1),
+              _buildWaveRing(wave2),
+              Container(
+                width: 76,
+                height: 76,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(
+                        alpha: 0.3 * (1.0 - (progress - 0.5).abs()),
+                      ),
+                      blurRadius: 18,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.bluetooth_searching_rounded,
+                  color: AppColors.primary,
+                  size: 36,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildWaveRing(double waveProgress) {
+    final size = 76.0 + (waveProgress * 54.0);
+    final opacity = (1.0 - waveProgress).clamp(0.0, 1.0) * 0.45;
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: opacity),
+          width: 2.0,
         ),
       ),
     );

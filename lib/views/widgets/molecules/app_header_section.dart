@@ -2,6 +2,7 @@ import 'package:bang_soil/services/csv_export_service.dart';
 import 'package:bang_soil/services/database_service.dart';
 import 'package:bang_soil/theme/app_theme.dart';
 import 'package:bang_soil/utils/enum.dart';
+import 'package:bang_soil/views/widgets/atoms/modal.dart';
 import 'package:bang_soil/views/widgets/molecules/debug_monitor_section.dart';
 import 'package:flutter/material.dart';
 
@@ -25,38 +26,26 @@ class AppHeaderSection extends StatelessWidget {
   }
 
   Future<void> _handleResetData(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await AppModal.showConfirmation(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: const Text(
-          'Reset Data',
-          style: TextStyle(color: AppColors.textPrimary),
-        ),
-        content: const Text(
+      title: 'Reset Data',
+      message:
           'Semua data sensor yang tersimpan akan dihapus permanen. Yakin ingin melanjutkan?',
-          style: TextStyle(color: AppColors.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.red),
-            child: const Text('Reset'),
-          ),
-        ],
-      ),
+      confirmText: 'Reset',
+      cancelText: 'Batal',
+      isDanger: true,
+      icon: Icons.delete_outline_rounded,
     );
 
     if (confirmed == true) {
       await DatabaseService.instance.deleteAllReadings();
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Data berhasil direset')));
+        AppModal.showSuccess(
+          context: context,
+          title: 'Berhasil',
+          message: 'Data berhasil direset.',
+          closeText: 'Tutup',
+        );
       }
     }
   }
