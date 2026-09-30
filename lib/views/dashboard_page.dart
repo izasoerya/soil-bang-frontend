@@ -21,6 +21,34 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
   Map<String, String> _lastListDevice = {};
   String? _selectedDeviceName;
   bool _isSampling = false;
+  int? _lastSamplingId;
+  DateTime? _lastFetchTime;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLastSamplingInfo();
+  }
+
+  Future<void> _loadLastSamplingInfo() async {
+    final lastReading = await DatabaseService.instance.getLastReading();
+    if (lastReading != null && mounted) {
+      setState(() {
+        _lastSamplingId = lastReading['id'] as int?;
+        if (lastReading['created_at'] != null) {
+          _lastFetchTime =
+              DateTime.tryParse(lastReading['created_at'].toString());
+        }
+      });
+    }
+  }
+
+  void _handleDataReset() {
+    setState(() {
+      _lastSamplingId = null;
+      _lastFetchTime = null;
+    });
+  }
 
   Future<void> _handleSampling(dynamic bluetoothService) async {
     final confirmed = await AppModal.showConfirmation(
@@ -111,14 +139,21 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
     final deviceBattery = deviceState.value?.battery ?? 0.0;
 
     ref.listen<AsyncValue<Sensor>>(sensorServiceProvider, (_, next) {
-      next.whenData((sensor) {
-        DatabaseService.instance.insertSensor(sensor);
-        if (_isSampling && mounted) {
+      next.whenData((sensor) async {
+        final id = await DatabaseService.instance.insertSensor(sensor);
+        if (!mounted) return;
+
+        setState(() {
+          _lastSamplingId = id;
+          _lastFetchTime = sensor.createdAt;
+        });
+
+        if (_isSampling) {
           setState(() => _isSampling = false);
           AppModal.showSuccess(
             context: context,
             title: 'Sampling Successful',
-            message: 'Success taking data',
+            message: 'Success taking data (Sample #$id)',
             closeText: 'Close',
           );
         }
@@ -132,7 +167,7 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
         color: AppColors.background,
         child: Column(
           children: [
-            AppHeaderSection(),
+            AppHeaderSection(onDataReset: _handleDataReset),
             Expanded(
               child: Builder(
                 builder: (context) {
@@ -219,7 +254,10 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
                             children: [
                               SensorHeaderSection(
                                 battery: deviceBattery,
-                                createdAt: DateTime.now(),
+                                createdAt: _lastFetchTime ?? sensor.createdAt,
+                                sampleId: _lastSamplingId,
+                                lastFetchTime:
+                                    _lastFetchTime ?? sensor.createdAt,
                               ),
                               const SizedBox(height: 20),
                               Padding(

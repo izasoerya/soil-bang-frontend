@@ -37,9 +37,9 @@ class DatabaseService {
     );
   }
 
-  Future<void> insertSensor(Sensor sensor) async {
+  Future<int> insertSensor(Sensor sensor) async {
     final db = await database;
-    await db.insert('sensor_readings', {
+    return await db.insert('sensor_readings', {
       'created_at': sensor.createdAt.toIso8601String(),
       'nm410': sensor.nm410,
       'nm435': sensor.nm435,
@@ -67,12 +67,34 @@ class DatabaseService {
 
   Future<List<Map<String, dynamic>>> getAllReadings() async {
     final db = await database;
-    return db.query('sensor_readings', orderBy: 'created_at ASC');
+    return db.query('sensor_readings', orderBy: 'id ASC');
+  }
+
+  Future<Map<String, dynamic>?> getLastReading() async {
+    final db = await database;
+    final results = await db.query(
+      'sensor_readings',
+      orderBy: 'id DESC',
+      limit: 1,
+    );
+    if (results.isNotEmpty) {
+      return results.first;
+    }
+    return null;
   }
 
   Future<void> deleteAllReadings() async {
     final db = await database;
     await db.delete('sensor_readings');
+    try {
+      await db.delete(
+        'sqlite_sequence',
+        where: 'name = ?',
+        whereArgs: ['sensor_readings'],
+      );
+    } catch (_) {
+      // sqlite_sequence may not exist if no autoincrement rows were ever created
+    }
   }
 
   Future<int> getReadingCount() async {
