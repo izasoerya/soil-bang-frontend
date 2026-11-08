@@ -31,11 +31,13 @@ class SensorHeaderSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final effectiveTime = lastFetchTime ?? createdAt;
     final hPad = MediaQuery.of(context).size.width * 0.05;
+
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: hPad),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(12),
@@ -43,13 +45,75 @@ class SensorHeaderSection extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(_batteryIcon(), color: _batteryColor(), size: 20),
-            const SizedBox(width: 6),
+            // Sample ID Badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.35),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.tag_rounded,
+                    color: AppColors.primary,
+                    size: 14,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    sampleId != null ? 'Sample #$sampleId' : 'Sample #-',
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+
+            // Last Fetch Time (Beside ID)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.access_time_rounded,
+                  color: AppColors.textSecondary,
+                  size: 14,
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  _formatTime(effectiveTime),
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+
+            const Spacer(),
+
+            // Divider
+            Container(width: 1, height: 16, color: AppColors.border),
+            const SizedBox(width: 10),
+
+            // Battery Indicator
+            Icon(_batteryIcon(), color: _batteryColor(), size: 18),
+            const SizedBox(width: 5),
             Text(
               '${battery.toStringAsFixed(0)}%',
               style: const TextStyle(
                 color: AppColors.textPrimary,
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
             ),

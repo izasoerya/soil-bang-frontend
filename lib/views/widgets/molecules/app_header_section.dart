@@ -7,7 +7,9 @@ import 'package:bang_soil/views/widgets/molecules/debug_monitor_section.dart';
 import 'package:flutter/material.dart';
 
 class AppHeaderSection extends StatelessWidget {
-  const AppHeaderSection({super.key});
+  const AppHeaderSection({super.key, this.onDataReset});
+
+  final VoidCallback? onDataReset;
 
   Future<void> _handleExportCSV(BuildContext context) async {
     try {
@@ -39,6 +41,7 @@ class AppHeaderSection extends StatelessWidget {
 
     if (confirmed == true) {
       await DatabaseService.instance.deleteAllReadings();
+      onDataReset?.call();
       if (context.mounted) {
         AppModal.showSuccess(
           context: context,

@@ -55,7 +55,7 @@ class DatabaseService {
 
   Future<void> insertSensor(Sensor sensor, {required String sampleId}) async {
     final db = await database;
-    await db.insert('sensor_readings', {
+    return await db.insert('sensor_readings', {
       'created_at': sensor.createdAt.toIso8601String(),
       'sample_id': sampleId,
       'led_type': sensor.ledType,
@@ -85,7 +85,20 @@ class DatabaseService {
 
   Future<List<Map<String, dynamic>>> getAllReadings() async {
     final db = await database;
-    return db.query('sensor_readings', orderBy: 'created_at ASC');
+    return db.query('sensor_readings', orderBy: 'id ASC');
+  }
+
+  Future<Map<String, dynamic>?> getLastReading() async {
+    final db = await database;
+    final results = await db.query(
+      'sensor_readings',
+      orderBy: 'id DESC',
+      limit: 1,
+    );
+    if (results.isNotEmpty) {
+      return results.first;
+    }
+    return null;
   }
 
   Future<void> deleteAllReadings() async {
