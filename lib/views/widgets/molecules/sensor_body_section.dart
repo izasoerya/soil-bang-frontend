@@ -5,9 +5,10 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 class SensorBodySection extends StatefulWidget {
-  const SensorBodySection({super.key, required this.sample});
+  const SensorBodySection({super.key, required this.sample, this.onLedChanged});
 
   final SensorSample sample;
+  final ValueChanged<int>? onLedChanged;
 
   @override
   State<SensorBodySection> createState() => _SensorBodySectionState();
@@ -95,8 +96,11 @@ class _SensorBodySectionState extends State<SensorBodySection> {
                           ),
                         )
                         .toList(),
-                    onChanged: (value) =>
-                        setState(() => _selectedLedType = value),
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() => _selectedLedType = value);
+                      widget.onLedChanged?.call(value);
+                    },
                   ),
                 ),
               ),

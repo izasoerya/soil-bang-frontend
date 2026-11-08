@@ -23,6 +23,8 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
   bool _isSampling = false;
   int? _lastSamplingId;
   DateTime? _lastFetchTime;
+  int _selectedLedType = 0;
+  final Map<int, int> _readingIdsByLedType = {};
 
   @override
   void initState() {
@@ -48,6 +50,7 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
     setState(() {
       _lastSamplingId = null;
       _lastFetchTime = null;
+      _readingIdsByLedType.clear();
     });
   }
 
@@ -105,6 +108,38 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
     });
   }
 
+  Future<void> _persistSample(SensorSample sample) async {
+    final sampleId = DateTime.now().toIso8601String();
+    var lastId = _lastSamplingId;
+    final readingIds = <int, int>{};
+    for (final sensor in sample.orderedReadings) {
+      final id = await DatabaseService.instance.insertSensor(
+        sensor,
+        sampleId: sampleId,
+      );
+      lastId = id;
+      readingIds[sensor.ledType] = id;
+    }
+    if (!mounted) return;
+    setState(() {
+      _lastSamplingId = lastId;
+      _lastFetchTime = DateTime.now();
+      _readingIdsByLedType
+        ..clear()
+        ..addAll(readingIds);
+    });
+    if (_isSampling) {
+      setState(() => _isSampling = false);
+      AppModal.showSuccess(
+        context: context,
+        title: 'Sampling Successful',
+        message:
+            'Success taking data${lastId == null ? '' : ' (Sample #$lastId)'}',
+        closeText: 'Close',
+      );
+    }
+  }
+
   bool _isManualScanning = false;
 
   Future<void> _handleScanDevices() async {
@@ -143,19 +178,7 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
     ref.listen<AsyncValue<SensorSample>>(sensorServiceProvider, (_, next) {
       next.whenData((sample) {
         if (!sample.isComplete) return;
-        final sampleId = DateTime.now().toIso8601String();
-        for (final sensor in sample.orderedReadings) {
-          DatabaseService.instance.insertSensor(sensor, sampleId: sampleId);
-        }
-        if (_isSampling && mounted) {
-          setState(() => _isSampling = false);
-          AppModal.showSuccess(
-            context: context,
-            title: 'Sampling Successful',
-            message: 'Success taking data (Sample #$id)',
-            closeText: 'Close',
-          );
-        }
+        _persistSample(sample);
       });
     });
 
@@ -257,14 +280,26 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
                               SensorHeaderSection(
                                 battery: deviceBattery,
                                 createdAt: DateTime.now(),
+                                sampleId: _lastSamplingId,
+                                lastFetchTime: _lastFetchTime,
                                 ledLabel: sample.isComplete
                                     ? '3 LED readings'
                                     : SensorLedType.fromValue(
                                         sample.selectedReading?.ledType ?? -1,
                                       ).label,
+                                sampleIndex:
+                                    _readingIdsByLedType[_selectedLedType] ??
+                                    _lastSamplingId ??
+                                    0,
+                                sampleCount: 3,
                               ),
                               const SizedBox(height: 20),
-                              SensorBodySection(sample: sample),
+                              SensorBodySection(
+                                sample: sample,
+                                onLedChanged: (ledType) {
+                                  setState(() => _selectedLedType = ledType);
+                                },
+                              ),
                             ],
                           ),
                         ),

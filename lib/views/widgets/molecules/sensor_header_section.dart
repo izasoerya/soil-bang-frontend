@@ -4,34 +4,25 @@ import 'package:flutter/material.dart';
 class SensorHeaderSection extends StatelessWidget {
   const SensorHeaderSection({
     super.key,
-    required this.battery,
     required this.createdAt,
-    required this.ledLabel,
+    this.battery,
+    this.sampleId,
+    this.lastFetchTime,
+    this.ledLabel = 'Unknown LED',
+    this.sampleIndex = 1,
+    this.sampleCount = 3,
   });
 
-  final double battery;
+  final double? battery;
   final DateTime createdAt;
+  final int? sampleId;
+  final DateTime? lastFetchTime;
   final String ledLabel;
-
-  IconData _batteryIcon() {
-    if (battery >= 90) return Icons.battery_full_rounded;
-    if (battery >= 70) return Icons.battery_5_bar_rounded;
-    if (battery >= 50) return Icons.battery_4_bar_rounded;
-    if (battery >= 30) return Icons.battery_3_bar_rounded;
-    if (battery >= 15) return Icons.battery_2_bar_rounded;
-    if (battery >= 5) return Icons.battery_1_bar_rounded;
-    return Icons.battery_0_bar_rounded;
-  }
-
-  Color _batteryColor() {
-    if (battery >= 50) return AppColors.green;
-    if (battery >= 20) return AppColors.amber;
-    return AppColors.red;
-  }
+  final int sampleIndex;
+  final int sampleCount;
 
   @override
   Widget build(BuildContext context) {
-    final effectiveTime = lastFetchTime ?? createdAt;
     final hPad = MediaQuery.of(context).size.width * 0.05;
 
     return Padding(
@@ -66,7 +57,7 @@ class SensorHeaderSection extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    sampleId != null ? 'Sample #$sampleId' : 'Sample #-',
+                    'Sample #$sampleIndex',
                     style: const TextStyle(
                       color: AppColors.primary,
                       fontSize: 12,
@@ -79,44 +70,6 @@ class SensorHeaderSection extends StatelessWidget {
             ),
             const SizedBox(width: 10),
 
-            // Last Fetch Time (Beside ID)
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.access_time_rounded,
-                  color: AppColors.textSecondary,
-                  size: 14,
-                ),
-                const SizedBox(width: 5),
-                Text(
-                  _formatTime(effectiveTime),
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-
-            const Spacer(),
-
-            // Divider
-            Container(width: 1, height: 16, color: AppColors.border),
-            const SizedBox(width: 10),
-
-            // Battery Indicator
-            Icon(_batteryIcon(), color: _batteryColor(), size: 18),
-            const SizedBox(width: 5),
-            Text(
-              '${battery.toStringAsFixed(0)}%',
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
             const Spacer(),
             Text(
               ledLabel,
@@ -127,18 +80,12 @@ class SensorHeaderSection extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Container(width: 1, height: 16, color: AppColors.border),
-            const Spacer(),
-            const Icon(
-              Icons.access_time_rounded,
-              color: AppColors.textSecondary,
-              size: 16,
-            ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 12),
             Text(
-              createdAt.toString().substring(11, 16),
+              (lastFetchTime ?? createdAt).toIso8601String().substring(11, 19),
               style: const TextStyle(
                 color: AppColors.textSecondary,
-                fontSize: 13,
+                fontSize: 12,
               ),
             ),
           ],
