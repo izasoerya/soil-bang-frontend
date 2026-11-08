@@ -8,7 +8,6 @@ import 'package:share_plus/share_plus.dart';
 class CsvExportService {
   static const List<String> _columns = [
     'id',
-    'sample_id',
     'created_at',
     'led_type',
     'nm410',

@@ -53,7 +53,7 @@ class DatabaseService {
     );
   }
 
-  Future<void> insertSensor(Sensor sensor, {required String sampleId}) async {
+  Future<int> insertSensor(Sensor sensor, {required String sampleId}) async {
     final db = await database;
     return await db.insert('sensor_readings', {
       'created_at': sensor.createdAt.toIso8601String(),
