@@ -7,6 +7,7 @@ part of 'sensor.dart';
 // **************************************************************************
 
 Sensor _$SensorFromJson(Map<String, dynamic> json) => Sensor(
+  ledType: (json['led_type'] as num).toInt(),
   nm410: (json['nm410'] as num).toDouble(),
   nm435: (json['nm435'] as num).toDouble(),
   nm460: (json['nm460'] as num).toDouble(),
@@ -31,6 +32,7 @@ Sensor _$SensorFromJson(Map<String, dynamic> json) => Sensor(
 );
 
 Map<String, dynamic> _$SensorToJson(Sensor instance) => <String, dynamic>{
+  'led_type': instance.ledType,
   'nm410': instance.nm410,
   'nm435': instance.nm435,
   'nm460': instance.nm460,

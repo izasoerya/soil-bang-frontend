@@ -19,11 +19,13 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE sensor_readings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sample_id TEXT NOT NULL,
+            led_type INTEGER NOT NULL,
             created_at TEXT NOT NULL,
             nm410 REAL, nm435 REAL, nm460 REAL, nm485 REAL,
             nm510 REAL, nm535 REAL, nm560 REAL, nm585 REAL,
@@ -34,13 +36,29 @@ class DatabaseService {
           )
         ''');
       },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute(
+            'ALTER TABLE sensor_readings ADD COLUMN sample_id TEXT',
+          );
+          await db.execute(
+            'ALTER TABLE sensor_readings ADD COLUMN led_type INTEGER',
+          );
+          await db.execute(
+            "UPDATE sensor_readings SET sample_id = id, led_type = -1 "
+            "WHERE sample_id IS NULL OR led_type IS NULL",
+          );
+        }
+      },
     );
   }
 
-  Future<void> insertSensor(Sensor sensor) async {
+  Future<void> insertSensor(Sensor sensor, {required String sampleId}) async {
     final db = await database;
     await db.insert('sensor_readings', {
       'created_at': sensor.createdAt.toIso8601String(),
+      'sample_id': sampleId,
+      'led_type': sensor.ledType,
       'nm410': sensor.nm410,
       'nm435': sensor.nm435,
       'nm460': sensor.nm460,
@@ -73,11 +91,18 @@ class DatabaseService {
   Future<void> deleteAllReadings() async {
     final db = await database;
     await db.delete('sensor_readings');
+    await db.delete(
+      'sqlite_sequence',
+      where: 'name = ?',
+      whereArgs: ['sensor_readings'],
+    );
   }
 
   Future<int> getReadingCount() async {
     final db = await database;
-    final result = await db.rawQuery('SELECT COUNT(*) as count FROM sensor_readings');
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM sensor_readings',
+    );
     return Sqflite.firstIntValue(result) ?? 0;
   }
 }

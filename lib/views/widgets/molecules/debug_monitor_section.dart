@@ -38,9 +38,13 @@ class RawBluetoothDebugDialog extends ConsumerWidget {
                   payload: sensorState.maybeWhen(
                     data: (sensor) {
                       print('✓ Sensor Data Loaded');
-                      return const JsonEncoder.withIndent(
-                        '  ',
-                      ).convert(sensor.toJson());
+                      return const JsonEncoder.withIndent('  ').convert({
+                        'complete': sensor.isComplete,
+                        'readings': sensor.readings.map(
+                          (key, value) =>
+                              MapEntry(key.toString(), value.toJson()),
+                        ),
+                      });
                     },
                     loading: () {
                       print('🔄 Sensor Loading');

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:bang_soil/models/sensor.dart';
 import 'package:bang_soil/services/database_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -7,7 +8,9 @@ import 'package:share_plus/share_plus.dart';
 class CsvExportService {
   static const List<String> _columns = [
     'id',
+    'sample_id',
     'created_at',
+    'led_type',
     'nm410',
     'nm435',
     'nm460',
@@ -45,7 +48,9 @@ class CsvExportService {
       final values = _columns.map((col) {
         final val = row[col];
         if (val == null) return '';
-        final str = val.toString();
+        final str = col == 'led_type'
+            ? _ledTypeName((val as num).toInt())
+            : val.toString();
         if (str.contains(',') || str.contains('"') || str.contains('\n')) {
           return '"${str.replaceAll('"', '""')}"';
         }
@@ -69,5 +74,18 @@ class CsvExportService {
         subject: 'SOIL-BANG Sensor Export $timestamp',
       ),
     );
+  }
+
+  String _ledTypeName(int value) {
+    switch (SensorLedType.fromValue(value)) {
+      case SensorLedType.white:
+        return 'white';
+      case SensorLedType.uv:
+        return 'uv';
+      case SensorLedType.ir:
+        return 'ir';
+      case SensorLedType.unknown:
+        return 'unknown';
+    }
   }
 }

@@ -3,6 +3,8 @@ part 'sensor.g.dart';
 
 @JsonSerializable()
 class Sensor {
+  @JsonKey(name: 'led_type')
+  final int ledType;
   final double nm410;
   final double nm435;
   final double nm460;
@@ -35,6 +37,7 @@ class Sensor {
   final DateTime createdAt;
 
   Sensor({
+    required this.ledType,
     required this.nm410,
     required this.nm435,
     required this.nm460,
@@ -62,6 +65,44 @@ class Sensor {
   factory Sensor.fromJson(Map<String, dynamic> json) => _$SensorFromJson(json);
 
   Map<String, dynamic> toJson() => _$SensorToJson(this);
+}
+
+enum SensorLedType {
+  white(0, 'White LED'),
+  ir(1, 'IR LED'),
+  uv(2, 'UV LED'),
+  unknown(-1, 'Unknown LED');
+
+  const SensorLedType(this.value, this.label);
+  final int value;
+  final String label;
+
+  static SensorLedType fromValue(int value) => SensorLedType.values.firstWhere(
+    (type) => type.value == value,
+    orElse: () => SensorLedType.unknown,
+  );
+}
+
+class SensorSample {
+  SensorSample(Map<int, Sensor> readings)
+    : readings = Map.unmodifiable(readings);
+
+  final Map<int, Sensor> readings;
+
+  bool get isComplete => readings.keys.toSet().containsAll(const {0, 1, 2});
+
+  int get count => readings.length;
+
+  List<Sensor> get orderedReadings =>
+      readings.values.toList()..sort((a, b) => a.ledType.compareTo(b.ledType));
+
+  Sensor? get selectedReading =>
+      orderedReadings.isEmpty ? null : orderedReadings.first;
+
+  SensorSample add(Sensor sensor) {
+    final next = Map<int, Sensor>.from(readings)..[sensor.ledType] = sensor;
+    return SensorSample(next);
+  }
 }
 
 extension SensorIterationExtension on Sensor {

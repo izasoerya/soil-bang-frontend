@@ -6,10 +6,12 @@ class SensorHeaderSection extends StatelessWidget {
     super.key,
     required this.battery,
     required this.createdAt,
+    required this.ledLabel,
   });
 
   final double battery;
   final DateTime createdAt;
+  final String ledLabel;
 
   IconData _batteryIcon() {
     if (battery >= 90) return Icons.battery_full_rounded;
@@ -17,7 +19,7 @@ class SensorHeaderSection extends StatelessWidget {
     if (battery >= 50) return Icons.battery_4_bar_rounded;
     if (battery >= 30) return Icons.battery_3_bar_rounded;
     if (battery >= 15) return Icons.battery_2_bar_rounded;
-    if (battery >= 5)  return Icons.battery_1_bar_rounded;
+    if (battery >= 5) return Icons.battery_1_bar_rounded;
     return Icons.battery_0_bar_rounded;
   }
 
@@ -52,6 +54,14 @@ class SensorHeaderSection extends StatelessWidget {
               ),
             ),
             const Spacer(),
+            Text(
+              ledLabel,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+              ),
+            ),
+            const SizedBox(width: 12),
             Container(width: 1, height: 16, color: AppColors.border),
             const Spacer(),
             const Icon(

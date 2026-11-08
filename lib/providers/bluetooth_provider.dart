@@ -26,9 +26,10 @@ final deviceScanProvider = FutureProvider.autoDispose<List<BluetoothDevice>>((
   return await service.getBluetoothDevice();
 });
 
-final sensorServiceProvider = StreamProvider<Sensor>((ref) async* {
+final sensorServiceProvider = StreamProvider<SensorSample>((ref) async* {
   final bleService = ref.watch(bluetoothServiceProvider);
   final stream = bleService.getStream();
+  var sample = SensorSample({});
 
   await for (final List<int> bytes in stream) {
     if (bytes.isEmpty) continue;
@@ -37,7 +38,13 @@ final sensorServiceProvider = StreamProvider<Sensor>((ref) async* {
       final String jsonStr = String.fromCharCodes(bytes).trim();
       final Map<String, dynamic> jsonMap = jsonDecode(jsonStr);
       if (jsonMap["type"] == "sensor") {
-        yield Sensor.fromJson(jsonMap);
+        final sensor = Sensor.fromJson(jsonMap);
+        if (SensorLedType.fromValue(sensor.ledType) == SensorLedType.unknown) {
+          continue;
+        }
+        if (sample.isComplete) sample = SensorSample({});
+        sample = sample.add(sensor);
+        yield sample;
       }
     } on FormatException catch (e) {
       print('Bad Packet: $e');

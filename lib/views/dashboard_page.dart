@@ -66,8 +66,9 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
         setState(() => _isSampling = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content:
-                Text('Sampling timed out. No response received from device.'),
+            content: Text(
+              'Sampling timed out. No response received from device.',
+            ),
             backgroundColor: AppColors.amber,
           ),
         );
@@ -110,9 +111,13 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
     final deviceState = ref.watch(deviceServiceProvider);
     final deviceBattery = deviceState.value?.battery ?? 0.0;
 
-    ref.listen<AsyncValue<Sensor>>(sensorServiceProvider, (_, next) {
-      next.whenData((sensor) {
-        DatabaseService.instance.insertSensor(sensor);
+    ref.listen<AsyncValue<SensorSample>>(sensorServiceProvider, (_, next) {
+      next.whenData((sample) {
+        if (!sample.isComplete) return;
+        final sampleId = DateTime.now().toIso8601String();
+        for (final sensor in sample.orderedReadings) {
+          DatabaseService.instance.insertSensor(sensor, sampleId: sampleId);
+        }
         if (_isSampling && mounted) {
           setState(() => _isSampling = false);
           AppModal.showSuccess(
@@ -136,7 +141,8 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
             Expanded(
               child: Builder(
                 builder: (context) {
-                  final isScanning = _isManualScanning ||
+                  final isScanning =
+                      _isManualScanning ||
                       scanState.isLoading ||
                       scanState.isRefreshing;
 
@@ -206,49 +212,30 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
                         ),
                         const SizedBox(height: 16),
                         sensorState.when(
-                          loading: () => const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 48),
+                          loading: () => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 48),
                             child: _LoadingState(
-                              message: 'Reading sensor data...',
+                              message: bluetoothService.isConnected
+                                  ? 'Click Perform Data Sampling to get new data.'
+                                  : 'Waiting for connection to device...',
                             ),
                           ),
                           error: (error, stack) =>
                               _ErrorState(message: error.toString()),
-                          data: (sensor) => Column(
+                          data: (sample) => Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               SensorHeaderSection(
                                 battery: deviceBattery,
                                 createdAt: DateTime.now(),
+                                ledLabel: sample.isComplete
+                                    ? '3 LED readings'
+                                    : SensorLedType.fromValue(
+                                        sample.selectedReading?.ledType ?? -1,
+                                      ).label,
                               ),
                               const SizedBox(height: 20),
-                              Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal:
-                                      MediaQuery.of(context).size.width * 0.05,
-                                  vertical: 4,
-                                ),
-                                child: const Row(
-                                  children: [
-                                    Icon(
-                                      Icons.graphic_eq_rounded,
-                                      color: AppColors.primary,
-                                      size: 18,
-                                    ),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      'Spectral Data',
-                                      style: TextStyle(
-                                        color: AppColors.textPrimary,
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              SensorBodySection(sensor: sensor),
+                              SensorBodySection(sample: sample),
                             ],
                           ),
                         ),
@@ -261,7 +248,8 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
                           child: SizedBox(
                             width: double.infinity,
                             child: ElevatedButton.icon(
-                              onPressed: _isSampling
+                              onPressed:
+                                  _isSampling || !bluetoothService.isConnected
                                   ? null
                                   : () => _handleSampling(bluetoothService),
                               icon: _isSampling
@@ -273,14 +261,14 @@ class DashboardPageState extends ConsumerState<DashboardPage> {
                                         color: Colors.white,
                                       ),
                                     )
-                                  : const Icon(
-                                      Icons.sensors_rounded,
-                                      size: 18,
-                                    ),
+                                  : const Icon(Icons.sensors_rounded, size: 18),
                               label: Text(
                                 _isSampling
-                                    ? 'Sampling in progress...'
-                                    : 'Perform Data Sampling',
+                                    ? 'Sampling in progress '
+                                          '${sensorState.value?.count ?? 0}/3...'
+                                    : bluetoothService.isConnected
+                                    ? 'Perform Data Sampling'
+                                    : 'Connect to device first',
                               ),
                             ),
                           ),
@@ -383,10 +371,7 @@ class _ErrorState extends StatelessWidget {
 }
 
 class _EmptyState extends StatefulWidget {
-  const _EmptyState({
-    required this.isScanning,
-    required this.onRetry,
-  });
+  const _EmptyState({required this.isScanning, required this.onRetry});
 
   final bool isScanning;
   final VoidCallback onRetry;
@@ -486,10 +471,7 @@ class _EmptyStateState extends State<_EmptyState>
 }
 
 class _RadarPulseIcon extends StatelessWidget {
-  const _RadarPulseIcon({
-    required this.animation,
-    required this.isScanning,
-  });
+  const _RadarPulseIcon({required this.animation, required this.isScanning});
 
   final Animation<double> animation;
   final bool isScanning;
