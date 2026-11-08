@@ -4,8 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('SensorHeaderSection Tests', () {
-    testWidgets('renders Sample ID, last fetch time, and battery percentage',
-        (tester) async {
+    testWidgets('renders sample index, time, and LED label', (tester) async {
       final testTime = DateTime(2026, 9, 30, 14, 30, 45);
 
       await tester.pumpWidget(
@@ -14,35 +13,31 @@ void main() {
             body: SensorHeaderSection(
               battery: 88,
               createdAt: testTime,
-              sampleId: 7,
+              sampleIndex: 2,
+              sampleCount: 3,
+              ledLabel: 'IR LED',
               lastFetchTime: testTime,
             ),
           ),
         ),
       );
 
-      expect(find.text('Sample #7'), findsOneWidget);
+      expect(find.text('Sample #2/3'), findsOneWidget);
       expect(find.text('14:30:45'), findsOneWidget);
-      expect(find.text('88%'), findsOneWidget);
+      expect(find.text('IR LED'), findsOneWidget);
     });
 
-    testWidgets('renders fallback when sampleId is null', (tester) async {
+    testWidgets('renders default sample index and LED label', (tester) async {
       final testTime = DateTime(2026, 9, 30, 10, 15, 0);
 
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: SensorHeaderSection(
-              battery: 45,
-              createdAt: testTime,
-            ),
-          ),
+          home: Scaffold(body: SensorHeaderSection(createdAt: testTime)),
         ),
       );
 
-      expect(find.text('Sample #-'), findsOneWidget);
-      expect(find.text('10:15:00'), findsOneWidget);
-      expect(find.text('45%'), findsOneWidget);
+      expect(find.text('Sample #1/3'), findsOneWidget);
+      expect(find.text('Unknown LED'), findsOneWidget);
     });
   });
 }
